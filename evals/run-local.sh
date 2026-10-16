@@ -24,7 +24,7 @@ for i in $(seq 1 "$N"); do
   (cd "$WS" && timeout "$TIMEOUT" opencode run --pure --format json -m "$MODEL" "$(cat "$TASK/instruction.md")" > /tmp/trace-$i.jsonl 2>&1) || true
   secs=$(( $(date +%s) - start ))
   ok=0; (cd "$WS" && npx vitest run tests/public >/dev/null 2>&1) && ok=1
-  fora="$(cd "$WS" && git status --porcelain | grep -v -E '^.. out/' || true)"
+  fora="$(cd "$WS" && git status --porcelain | grep -v -E '^.. (out/|node_modules/)' || true)"
   if [ -n "$fora" ]; then ok=0; echo "  run $i: escreveu fora de out/ (na final isso zera):"; echo "$fora" | sed 's/^/    /'; fi
   pass=$((pass + ok))
   echo "run $i: $([ $ok = 1 ] && echo PASS || echo FAIL) em ${secs}s · trace: /tmp/trace-$i.jsonl · workspace: $WS"
