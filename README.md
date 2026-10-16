@@ -29,7 +29,9 @@ skills/<nome>/SKILL.md   procedimentos; scripts auxiliares podem ficar junto (ex
 
 ## 3. Teste local (o TestMyAgent roda só a final)
 
-Precisa de Node 22+, git, [opencode](https://opencode.ai) e uma chave OpenRouter de conta **grátis** (sem crédito).
+Precisa de Node 22+, git, [opencode](https://opencode.ai) e uma chave OpenRouter.
+
+**Chave compartilhada do evento:** pegue a chave aqui → https://share.1password.com/s#o_lbfMaP8vWn37Nt5c-ue1qax0wh8Cy__37g8FG4jl0 (limite de US$ 5 para todos, válida por 7 dias). Use a chave só no seu terminal (`export OPENROUTER_API_KEY=...`). **Nunca** coloque a chave no repo, num commit ou num print: o GitHub detecta e a chave é revogada para todos. Também funciona com uma chave de conta grátis sua.
 Modelos grátis para testar: [artigo na wiki DFL](https://wiki.devfellowship.com/a/hackathon-dfl-day4-modelos-ia-gratuitos).
 
 - O `evals/run-local.sh` usa por padrão um modelo grátis: `openrouter/nvidia/nemotron-3-super-120b-a12b:free` (tem tool calling).
@@ -53,7 +55,7 @@ Dicas de harness:
 - Mude UMA coisa por vez (prompt, skill, script de checagem) e compare.
 - Leia o trace (`/tmp/trace-N.jsonl`) para ver onde o agente se perde.
 
-## 4. Entrega às 14:30
+## 4. Entrega
 
 No slot da sua equipe no board do evento (seção SOLUÇÕES), preencha:
 
@@ -61,4 +63,4 @@ No slot da sua equipe no board do evento (seção SOLUÇÕES), preencha:
 - URL do repo público
 - Commit SHA final (40 caracteres: `git rev-parse HEAD`)
 
-Commit depois das 14:30 não conta. A produção roda a final no TestMyAgent; a DFL paga essa execução.
+A produção roda a final no TestMyAgent no commit entregue; a DFL paga essa execução.
