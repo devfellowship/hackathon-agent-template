@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Roda o agente desta pasta numa task de exemplo, N vezes, e conta quantas passam.
 # Uso: OPENROUTER_API_KEY=... evals/run-local.sh <pasta-da-task-exemplo> [vezes]
+# Modelo padrão: um modelo GRÁTIS do OpenRouter (conta grátis, sem crédito). Troque com MODEL=openrouter/<id>.
+# A avaliação final usa deepseek/deepseek-v4.1-flash (paga pela DFL).
 # Precisa de: node 22+, npm, git e opencode (https://opencode.ai).
 set -euo pipefail
 TASK="$(cd "$1" && pwd)"; N="${2:-1}"
 AGENT="$(cd "$(dirname "$0")/.." && pwd)"
-MODEL="${MODEL:-openrouter/deepseek/deepseek-v4.1-flash}"
+MODEL="${MODEL:-openrouter/nvidia/nemotron-3-super-120b-a12b:free}"
 TIMEOUT="${TIMEOUT:-600}"
 pass=0
 for i in $(seq 1 "$N"); do
