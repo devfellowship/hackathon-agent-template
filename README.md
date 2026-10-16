@@ -29,8 +29,13 @@ skills/<nome>/SKILL.md   procedimentos; scripts auxiliares podem ficar junto (ex
 
 ## 3. Teste local (o TestMyAgent roda só a final)
 
-Precisa de Node 22+, git, [opencode](https://opencode.ai) e uma chave OpenRouter.
-Modelos grátis para testar: [artigo na wiki DFL](https://wiki.devfellowship.com/a/hackathon-dfl-day4-modelos-ia-gratuitos). A avaliação final usa `deepseek-v4.1-flash`, e a DFL paga só essa run.
+Precisa de Node 22+, git, [opencode](https://opencode.ai) e uma chave OpenRouter de conta **grátis** (sem crédito).
+Modelos grátis para testar: [artigo na wiki DFL](https://wiki.devfellowship.com/a/hackathon-dfl-day4-modelos-ia-gratuitos).
+
+- O `evals/run-local.sh` usa por padrão um modelo grátis: `openrouter/nvidia/nemotron-3-super-120b-a12b:free` (tem tool calling).
+- Troque com `MODEL=openrouter/<id>` (qualquer id `:free` da lista do OpenRouter).
+- **A avaliação final usa `deepseek-v4.1-flash`**, paga pela DFL. Não há versão `:free` dele no OpenRouter hoje, então o modelo grátis é só um substituto local. Modelos grátis têm limite de requisições (erro 429): espere e rode de novo.
+- Se o seu agente passa com um modelo grátis menor, ele tende a passar com o `deepseek-v4.1-flash`. O inverso não é garantido.
 
 ```bash
 git clone <repo-modelo-das-tasks>          # tem a task de exemplo de cada problema
