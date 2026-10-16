@@ -40,10 +40,12 @@ Modelos grátis para testar: [artigo na wiki DFL](https://wiki.devfellowship.com
 - Se o seu agente passa com um modelo grátis menor, ele tende a passar com o `deepseek-v4.1-flash`. O inverso não é garantido.
 
 ```bash
-git clone <repo-modelo-das-tasks>          # tem a task de exemplo de cada problema
 export OPENROUTER_API_KEY=...
-evals/run-local.sh <repo-modelo-das-tasks>/p1-exemplo 3   # roda 3 vezes e conta os PASS
+evals/run-local.sh examples/biblioteca 3     # task de exemplo deste repo: roda 3 vezes e conta os PASS
 ```
+
+`examples/biblioteca` é uma task de treino (multas e reservas de biblioteca, 2 casos: simples e médio).
+No sábado, a produção publica as tasks de exemplo dos 3 problemas votados; rode o mesmo comando apontando para a pasta delas.
 
 O script monta o workspace igual ao runner (environment + tests/public + seu AGENTS.md e skills/),
 roda o opencode, roda os testes públicos e avisa se o agente escreveu fora de `out/`.
