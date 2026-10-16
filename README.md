@@ -1,7 +1,7 @@
 # Template de agente — Hackathon DFL Day 4 (UEM)
 
-Este repositório é o ponto de partida do agente da sua equipe. O agente é avaliado no
-[TestMyAgent](https://testmyagent.devfellowship.com) na rodada final, nos 4 casos (1 exemplo + 3 ocultos)
+Este repositório é o ponto de partida do agente da sua equipe (3 a 5 pessoas, ou solo). O agente é avaliado no
+[TestMyAgent](https://testmyagent.devfellowship.com) na rodada final, nos 5 casos (2 exemplos públicos, um simples e um médio, + 3 ocultos)
 do problema que a sua equipe escolheu.
 
 ## 1. Crie o repo da equipe
@@ -51,7 +51,7 @@ roda o opencode, roda os testes públicos e avisa se o agente escreveu fora de `
 Dicas de harness:
 
 - Rode 3 vezes: 3/3 é estável, 1/3 é sorte.
-- Crie casos parecidos com o exemplo: os 3 casos ocultos não são o exemplo.
+- Crie casos parecidos com o exemplo: os 3 casos ocultos não são os exemplos.
 - Mude UMA coisa por vez (prompt, skill, script de checagem) e compare.
 - Leia o trace (`/tmp/trace-N.jsonl`) para ver onde o agente se perde.
 
