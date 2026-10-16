@@ -30,7 +30,7 @@ skills/<nome>/SKILL.md   procedimentos; scripts auxiliares podem ficar junto (ex
 ## 3. Teste local (o TestMyAgent roda só a final)
 
 Precisa de Node 22+, git, [opencode](https://opencode.ai) e uma chave OpenRouter.
-Modelos grátis para testar: artigo na wiki DFL (link no mural).
+Modelos grátis para testar: [artigo na wiki DFL](https://wiki.devfellowship.com/a/hackathon-dfl-day4-modelos-ia-gratuitos). A avaliação final usa `deepseek-v4.1-flash`, e a DFL paga só essa run.
 
 ```bash
 git clone <repo-modelo-das-tasks>          # tem a task de exemplo de cada problema
