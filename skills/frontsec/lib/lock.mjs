@@ -127,3 +127,59 @@ export function installed(lockOrPkgs) {
   const pkgs = asPkgs(lockOrPkgs);
   return Object.keys(pkgs).filter((k) => k && k.includes('node_modules/')).map((k) => ({ key: k, name: nameOf(k), version: pkgs[k].version, entry: pkgs[k] }));
 }
+
+// ---------- graph relations (pick the one the spec DEFINES: direct vs transitive) ----------
+// Edges follow Node resolution. Node ids are install keys; the project root is ''.
+// buildGraph(lock, opts) -> { pkgs, out: Map key -> [child keys], in: Map key -> [parent keys] }
+export function buildGraph(lockOrPkgs, opts = {}) {
+  const pkgs = asPkgs(lockOrPkgs);
+  const rootFields = opts.rootFields || ['dependencies', 'devDependencies', 'optionalDependencies'];
+  const depFields = opts.depFields || ['dependencies', 'optionalDependencies'];
+  const out = new Map();
+  const inn = new Map();
+  for (const k of Object.keys(pkgs)) { out.set(k, []); inn.set(k, []); }
+  for (const k of Object.keys(pkgs)) {
+    for (const dep of depNames(pkgs[k], k === '' ? rootFields : depFields)) {
+      const t = resolveDep(pkgs, k, dep);
+      if (!t) continue;
+      if (!out.get(k).includes(t)) out.get(k).push(t);
+      if (!inn.get(t).includes(k)) inn.get(t).push(k);
+    }
+  }
+  return { pkgs, out, in: inn };
+}
+
+// DIRECT dependencies of a package (one hop): install keys it resolves to. ex: directDependencies(g, 'node_modules/a')
+export const directDependencies = (g, key) => [...(g.out.get(key) || [])];
+// DIRECT dependents (one hop): who requires this exact install. '' = the project root.
+// ex: directDependents(g, 'node_modules/c').map(nameOf)  -> ['a', 'z'] (the root shows as '')
+export const directDependents = (g, key) => [...(g.in.get(key) || [])];
+
+function reach(map, key) {
+  const seen = new Set();
+  const stack = [...(map.get(key) || [])];
+  while (stack.length) {
+    const k = stack.pop();
+    if (seen.has(k) || k === key) continue;
+    seen.add(k);
+    stack.push(...(map.get(k) || []));
+  }
+  return [...seen];
+}
+// TRANSITIVE dependencies (all descendants, any depth). ex: allDependencies(g, 'node_modules/a')
+export const allDependencies = (g, key) => reach(g.out, key);
+// TRANSITIVE dependents (all ancestors, any depth; includes '' when reachable from the root).
+export const allDependents = (g, key) => reach(g.in, key);
+
+// Every simple path (list of install keys) from the root to `key` (no cycles). limit caps the count.
+// ex: allPathsTo(g, 'node_modules/c').map((p) => p.map(nameOf))  -> [['a','b','c'], ['z','c']]
+export function allPathsTo(g, key, limit = 1000) {
+  const res = [];
+  const rec = (k, path) => {
+    if (res.length >= limit) return;
+    if (k === key) { res.push(path); return; }
+    for (const t of g.out.get(k) || []) if (!path.includes(t)) rec(t, [...path, t]);
+  };
+  rec('', []);
+  return res;
+}

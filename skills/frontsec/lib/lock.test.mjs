@@ -55,3 +55,14 @@ test('auditDeps merges copies, fix and bundle', () => {
   assert.equal(r[1].inBundle, true);
   assert.equal(r[0].inBundle, false);
 });
+
+test('graph relations: direct vs transitive', async () => {
+  const { buildGraph, directDependents, allDependents, directDependencies, allDependencies, allPathsTo } = await import('./lock.mjs');
+  const g = buildGraph(lock);
+  assert.deepEqual(directDependents(g, 'node_modules/c').sort(), ['node_modules/z']);
+  assert.deepEqual(directDependents(g, 'node_modules/a').sort(), ['', 'node_modules/c']);
+  assert.deepEqual(allDependents(g, 'node_modules/a/node_modules/c').map(nameOf).sort(), ['', 'a', 'b', 'c', 'z']);
+  assert.deepEqual(directDependencies(g, 'node_modules/a'), ['node_modules/a/node_modules/b']);
+  assert.ok(allDependencies(g, 'node_modules/z').includes('node_modules/a/node_modules/c'));
+  assert.deepEqual(allPathsTo(g, 'node_modules/c').map((p) => p.map(nameOf)), [['z', 'c']]);
+});

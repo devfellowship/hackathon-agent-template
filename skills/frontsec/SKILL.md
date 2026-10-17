@@ -106,6 +106,13 @@ Se o README diz diferente de um padrão, passe a opção ou escreva a regra à m
 - `resolveDep(pkgs, de, nome)` resolução do Node (sobe pastas até `node_modules/nome`) → chave ou `null`
 - `resolveTree(lock, { rootFields, depFields })` BFS da raiz → Map chave → `{ name, version, path (nomes), keys, viaDevOnly }`; caminho = mais curto, empate por texto. Padrão raiz: `dependencies`+`devDependencies`+`optionalDependencies` (siga o README!)
 - `installed(lock)` todos os pacotes instalados
+- Grafo: `const g = L.buildGraph(lock, { rootFields, depFields })` (nós = chaves de instalação, raiz = `''`).
+  **Escolha a relação que o README DEFINE — leia a definição ao pé da letra:**
+  - "dependentes diretos / quem depende de X" (1 passo): `L.directDependents(g, chave)` → ex.: `c` é exigido por `a` e `z` → `['node_modules/a','node_modules/z']`
+  - "todos que dependem de X, direta ou indiretamente" (ancestrais): `L.allDependents(g, chave)`
+  - "dependências diretas de X": `L.directDependencies(g, chave)`; "todas (transitivas)": `L.allDependencies(g, chave)`
+  - "caminho" (um só, mais curto): `resolveTree(...).get(chave).path`; "todos os caminhos": `L.allPathsTo(g, chave)`
+  - A raiz aparece como `''` — tire-a (`.filter(Boolean)`) se o README não conta o projeto. Converta chave → nome com `L.nameOf`.
 - `mapAdvisories(lista, { id, pkg, range, severity })` renomeia campos da base de avisos
 - `auditDeps({ lock, advisories, versions, severityOrder, bundleIds, treeOpts })` → um item por `nome@versao` vulnerável, ordenado por nome e versão:
   `{ pkg, version, id, advisories, advisoryIds, severity, path, keys, fix, inBundle, viaDevOnly }`
