@@ -131,8 +131,10 @@ export function installed(lockOrPkgs) {
 // ---------- graph relations (pick the one the spec DEFINES: direct vs transitive) ----------
 // Edges follow Node resolution. Node ids are install keys; the project root is ''.
 // buildGraph(lock, opts) -> { pkgs, out: Map key -> [child keys], in: Map key -> [parent keys] }
+// opts.skipDev: ignore copies with "dev": true (as if not installed). opts.rootFields default all three maps.
 export function buildGraph(lockOrPkgs, opts = {}) {
-  const pkgs = asPkgs(lockOrPkgs);
+  const all = asPkgs(lockOrPkgs);
+  const pkgs = opts.skipDev ? Object.fromEntries(Object.entries(all).filter(([k, v]) => k === '' || !v.dev)) : all;
   const rootFields = opts.rootFields || ['dependencies', 'devDependencies', 'optionalDependencies'];
   const depFields = opts.depFields || ['dependencies', 'optionalDependencies'];
   const out = new Map();
@@ -182,4 +184,12 @@ export function allPathsTo(g, key, limit = 1000) {
   };
   rec('', []);
   return res;
+}
+
+// Declared range that `fromKey` ('' = root) wrote for dependency `name` (looks in the given fields). null if none.
+// ex: declaredRange(g, 'node_modules/a', 'b') -> '^1.0.0'
+export function declaredRange(g, fromKey, name, fields = ['dependencies', 'optionalDependencies', 'devDependencies', 'peerDependencies']) {
+  const e = g.pkgs[fromKey] || {};
+  for (const f of fields) if (e[f] && name in e[f]) return e[f][name];
+  return null;
 }

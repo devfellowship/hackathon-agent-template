@@ -116,3 +116,10 @@ export function safe(label, fn, fallback) {
     return fallback;
   }
 }
+
+// Count per key with ALL keys present (zeros included). ex: countKeys(achados, (a) => a.tipo, ['x','y']) -> { x: 2, y: 0 }
+export function countKeys(arr, keyFn, keys) {
+  const out = Object.fromEntries(keys.map((k) => [k, 0]));
+  for (const x of arr) { const k = keyFn(x); out[k] = (out[k] || 0) + 1; }
+  return out;
+}

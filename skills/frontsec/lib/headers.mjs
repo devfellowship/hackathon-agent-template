@@ -93,14 +93,20 @@ export function framingProtection(raw) {
 
 export const nosniffOk = (raw) => (getHeader(raw, 'x-content-type-options') || '').trim().toLowerCase() === 'nosniff';
 
-// Referrer-Policy: last valid token wins (browser rule). Unsafe = 'unsafe-url' | 'no-referrer-when-downgrade' (configurable).
-export function referrerPolicy(raw, unsafe = ['unsafe-url', 'no-referrer-when-downgrade']) {
-  const v = getHeader(raw, 'referrer-policy');
-  if (v === undefined) return { present: false, policy: null, unsafe: null };
-  const toks = String(v).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-  const policy = toks.length ? toks[toks.length - 1] : '';
-  return { present: true, policy, unsafe: unsafe.includes(policy) };
+export const REFERRER_POLICIES = ['no-referrer', 'no-referrer-when-downgrade', 'origin', 'origin-when-cross-origin', 'same-origin', 'strict-origin', 'strict-origin-when-cross-origin', 'unsafe-url'];
+// Referrer-Policy (browser rule): join ALL Referrer-Policy headers with ',', the LAST RECOGNIZED token wins;
+// none recognized/absent -> opts.default ('strict-origin-when-cross-origin'). unsafe = 'unsafe-url' | 'no-referrer-when-downgrade'.
+// ex: referrerPolicy([['Referrer-Policy','no-referrer, foo']]).policy === 'no-referrer'
+export function referrerPolicy(raw, opts = {}) {
+  const unsafe = opts.unsafe || ['unsafe-url', 'no-referrer-when-downgrade'];
+  const vals = getHeaderAll(raw, 'referrer-policy');
+  const toks = vals.join(',').split(',').map((s) => s.trim().toLowerCase()).filter((t) => REFERRER_POLICIES.includes(t));
+  const policy = toks.length ? toks[toks.length - 1] : (opts.default ?? 'strict-origin-when-cross-origin');
+  return { present: vals.length > 0, policy, unsafe: unsafe.includes(policy) };
 }
+
+// All CSP policies (each Content-Security-Policy header is one policy; Report-Only ignored). -> [parseCsp(...)]
+export const cspPolicies = (raw, opts) => getHeaderAll(raw, 'content-security-policy').map((v) => parseCsp(v, opts));
 
 // Permissions-Policy "camera=(), geolocation=(self)" -> { camera: [], geolocation: ['self'] }
 export function parsePermissionsPolicy(value) {

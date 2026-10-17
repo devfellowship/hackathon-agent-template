@@ -44,6 +44,7 @@ Se o README diz diferente de um padrão, passe a opção ou escreva a regra à m
 - `uniqBy(arr, keyFn)` / `groupBy(arr, keyFn)` (Map) / `uniqSorted(arr)`
 - `sum(arr, fn)` → `L.sum(itens, (i) => i.pontos)`
 - `floorDiv(a,b)` → `L.floorDiv(pontos * 10, esforco)`; `clamp(x, lo, hi)`
+- `countKeys(arr, keyFn, chaves)` contagem com todas as chaves (zeros)
 - `scaleGrade(v, scale, {forced})` limites inclusivos → `L.scaleGrade(16, [[0,'A'],[15,'B'],[35,'C'],[Infinity,'F']])` = `'C'`
 - `maxByOrder(vals, ordem)` → `L.maxByOrder(['media','alta'], ['baixa','media','alta','critica'])` = `'alta'`
 - `firstMatch([[cond, rótulo], ...], fallback)` regras em ordem (cond pode ser função) → motivo de exceção
@@ -58,14 +59,15 @@ Se o README diz diferente de um padrão, passe a opção ou escreva a regra à m
 - `listCases(dir)` pastas de casos; `writeOut('out/x.json', obj)` (recusa fora de `out/`)
 
 ### engine
-- `scanTree(root, { rules, exts })` roda regras por linha em todos os arquivos.
+- `scanTree(root, { rules, exts })` roda regras por linha em todos os arquivos (`exts: 'all'` = qualquer extensão).
   `rules = [{ code, exts, detect(linha, ctx) }]`; `detect` devolve `true/false` ou array de achados (objetos, ex.: `{ cred }`).
   `ctx = { file, lineNo, ext, root, lines }`. Retorna `{ findings: [{rule,file,line}] únicos e ordenados, hits: todos os brutos }`.
 - `bannersByFile(root)` → Map arquivo → `[{ name, version, id: 'nome@versao' }]` (banners `/*! nome@1.2.3`, só `.js`)
 
 ### scan (texto)
 - `matchAll(linha, re)` → `[{ text, index, end, groups }]`
-- `tokenRegex(prefixo, chars, min, max?, {boundary})` → `L.tokenRegex('sk_live_', 'A-Za-z0-9', 24)` (24 ou mais); exato 32 hex sem cortar sequência maior: `L.tokenRegex('h_', '0-9a-f', 32, 32, { boundary: 'right' })`. Padrão `boundary:'none'` = acha dentro de qualquer texto.
+- `tokenRegex(prefixo, chars, min, max?, {boundary})` → `L.tokenRegex('sk_live_', 'A-Za-z0-9', 24)` (24 ou mais); exato 32 hex sem cortar sequência maior: `L.tokenRegex('h_', '0-9a-f', 32, 32, { boundary: 'right' })`; "antes e depois não pode ser letra, dígito ou `_`": `{ boundary: 'word' }`. Padrão `boundary:'none'` = acha dentro de qualquer texto.
+- `allSameChar(s)` placeholder de caracteres todos iguais; `findUrlCredentials(linha)` → `[{ user, pass, userinfo }]`; `findAtobLiterals(linha)` → `[{ decoded }]` (base64 padrão); `findPemBlocks(linhas)` → `[{ beginLine, body }]` (chave privada, corpo sem espaços juntado)
 - `looksLikePlaceholder(s)` só se o README falar de placeholder
 - `findJwts(linha)` → `[{ token, payload, header }]` (payload decodificado de base64url; `null` se não for JSON) → `L.findJwts(l).filter((j) => !PUBLICOS.includes(j.payload?.role))`
 - `decodeJwt(tok)`, `b64urlDecode(s)`
@@ -78,6 +80,10 @@ Se o README diz diferente de um padrão, passe a opção ou escreva a regra à m
 - `findBanners(texto)` → `[{ name, version, id }]`
 - `findSourceMapRef(linha, {allowLegacy})` → `{ target, isDataUri }` ou `null`. Mapa exposto: `r.isDataUri || L.existsIn(root, L.resolveFrom(ctx.file, r.target))`
 - `segmentAfter(linha, de, ';')`, `escapeRegex(s)`
+- Fluxo de dados (taint) linha a linha: `const t = L.taintTracker({ sources, sanitizers })`; `t.isTainted(texto)`; `t.assign(nome, expr)` (contamina ou limpa); `t.addSource('ev.data')`.
+  `parseVarAssignment(linha)` → `{ keyword, name, expr }` (`[const|let|var] x = ...`, não `==`, não `+=`); `containsName(texto, nome)` nome inteiro (`a.nome` não conta).
+  `sinkSegments(linha, [regex...])` → `[{ sink, segment }]` para qualquer sink; prontos: `L.HTML_SINKS`, `L.EXEC_SINKS`, `L.REDIRECT_SINKS` (`locationHref`, `windowLocation`, `locationAssign`, `locationReplace`, `windowOpen`).
+  `findMessageListeners(linhas)` → `[{ line, param, endLine, checksOrigin }]` (`addEventListener("message", ...)` até linha que começa com `})`; checa origem = `p.origin ===`/`!==`). Avalie os sinks da linha ANTES de aplicar a atribuição da mesma linha, se o README mandar.
 
 ### html (funciona numa linha ou no arquivo todo)
 - `findTags(texto, 'a')` → `[{ attrs, raw, index }]` (atributos em minúsculas, aspas duplas/simples/sem aspas)
@@ -87,13 +93,14 @@ Se o README diz diferente de um padrão, passe a opção ou escreva a regra à m
 - `inlineScripts(texto)` → `[{ content, startLine }]`; `metaHttpEquiv(texto)`; `inlineHandlers(texto)` (`onclick=`...)
 
 ### headers (nomes sem diferenciar maiúsculas)
-- `getHeader(h, nome)` / `getHeaderAll(h, nome)` / `normHeaders(h)`
+- `getHeader(h, nome)` (1ª ocorrência) / `getHeaderAll(h, nome)` / `normHeaders(h)` — `h` pode ser objeto ou lista de pares `[nome, valor]`
+- `cspPolicies(h)` → uma política por header CSP (Report-Only ignorado)
 - `parseCsp(valor)` → `{ directives: { 'script-src': [...] } }` (nome minúsculo; diretiva repetida: vale a 1ª)
 - `effectiveDirective(csp, ['script-src','default-src'])` → `{ name, values }` ou `null` (nenhuma existe)
 - `unsafeTokens(values, ruins = ["'unsafe-inline'","'unsafe-eval'",'*'], {ci})` → tokens ruins presentes (exato; `https://*.x` NÃO é `*`)
 - `hasNonceOrHash`, `hasStrictDynamic`, `hasWildcardHost`, `schemeSources`
 - `parseHsts(valor)` → `{ present, maxAge (número|null), includeSubDomains, preload }`
-- `framingProtection(h)` (X-Frame-Options/frame-ancestors), `nosniffOk(h)`, `referrerPolicy(h)`, `parsePermissionsPolicy(v)`, `corsInfo(h)`, `versionLeak(h)`
+- `framingProtection(h)` (X-Frame-Options/frame-ancestors), `nosniffOk(h)`, `referrerPolicy(h)` (junta todos os headers, vale o último token reconhecido, padrão `strict-origin-when-cross-origin`), `parsePermissionsPolicy(v)`, `corsInfo(h)`, `versionLeak(h)`
 
 ### semver
 - `parseVersion(v)`, `cmpVersion(a,b)` numérico, prerelease < release → `L.cmpVersion('1.10.0','1.9.0') > 0`
@@ -114,8 +121,10 @@ Se o README diz diferente de um padrão, passe a opção ou escreva a regra à m
   - "caminho" (um só, mais curto): `resolveTree(...).get(chave).path`; "todos os caminhos": `L.allPathsTo(g, chave)`
   - A raiz aparece como `''` — tire-a (`.filter(Boolean)`) se o README não conta o projeto. Converta chave → nome com `L.nameOf`.
 - `mapAdvisories(lista, { id, pkg, range, severity })` renomeia campos da base de avisos
+- `declaredRange(g, chaveDoDependente, nome)` faixa que o dependente declarou (raiz = `''`)
 - `auditDeps({ lock, advisories, versions, severityOrder, bundleIds, treeOpts })` → um item por `nome@versao` vulnerável, ordenado por nome e versão:
-  `{ pkg, version, id, advisories, advisoryIds, severity, path, keys, fix, inBundle, viaDevOnly }`
+  `{ pkg, version, id, key, advisories, advisoryIds, severity, path, keys, fix, inBundle, viaDevOnly }`
+  Opções: `perCopy: true` (um item por cópia instalada, `id` = chave), `skipDev: true` (ignora `"dev": true`), `fixOpts: { skipPrerelease: true }`.
 
 ### cookies
 - `parseSetCookie(h)` → `{ name, value, attrs }` (atributos em minúsculas; repetido: vale o último)
@@ -128,6 +137,12 @@ Se o README diz diferente de um padrão, passe a opção ou escreva a regra à m
 - `runJar(passos, host)` com `passos = [{ name, path, time, setCookies }]` → `{ identities: Map → { name, domain, path, sets:[{stepIndex, cookie}], deletions, ... } }`.
   Remoção (vida ≤ 0) não cria cookie; só remove a MESMA identidade (nome+domínio+caminho).
   `setBefore(rec, i)` gravado antes do passo i; `deletedInStep(rec, i)` removido no passo i.
+
+- Pote de cookies do navegador (simulação completa): `const jar = L.createJar({ publicSuffixes, checks: [['secure_on_http','motivo_do_readme'], ...] })`
+  `jar.expire(momento)`; `jar.receive(url, momento, setCookies)` → `[{ action: 'set'|'replace'|'delete'|'noop-delete'|'rejected', reason, cookie }]` (substituir mantém a posição de criação);
+  `jar.cookiesFor(url, { context: 'same-site'|'cross-site', navigation, method })` ordenado por caminho mais longo e criação mais antiga; `L.cookieHeader(lista)` → `"a=1; b=2"`; `jar.list()`.
+  Checks prontos (ordem padrão): `secure_on_http`, `public_suffix`, `domain_mismatch`, `host_prefix`, `secure_prefix`, `samesite_none_insecure`. Mapeie o `contexto` do README para `'same-site'`/`'cross-site'`.
+- `parseUrl(url)` → `{ scheme, host, path, query }`; `isoNoMs(ms)` → `'2026-10-21T13:00:00Z'`
 
 ### dates (UTC)
 - `toMs`, `cmpDate`, `cmpDay`, `dayOf`, `daysBetween(a,b)`, `secondsBetween(a,b)`, `addDays(d,n)`, `isBefore(a,b)`, `isOnOrBefore(a,b)`

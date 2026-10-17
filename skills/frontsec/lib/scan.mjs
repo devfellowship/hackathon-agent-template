@@ -14,16 +14,17 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 export const escapeRegex = esc;
 
 // Build a token regex: prefix + chars{min,max}.
-// opts.boundary: 'none' (default; substring match, like a greedy scan), 'left', 'right', 'both'.
+// opts.boundary: 'none' (default; substring match, like a greedy scan), 'left', 'right', 'both', 'word'.
 //   'right' = next char must NOT be in chars (so exactly-N tokens are not cut from longer runs).
 //   'left'  = previous char must not be a word char [A-Za-z0-9_].
+//   'word'  = previous AND next char must not be [A-Za-z0-9_] (start/end of line ok) — "limite" rules.
 // ex: tokenRegex('key_', 'A-Za-z0-9', 24)            // key_ + 24 or more
 // ex: tokenRegex('sec_', '0-9a-f', 32, 32, { boundary: 'right' })  // exactly 32 hex, not 33
 export function tokenRegex(prefix, chars, min, max = null, opts = {}) {
   const b = opts.boundary || 'none';
   const q = max === null ? `{${min},}` : `{${min},${max}}`;
-  const left = b === 'left' || b === 'both' ? '(?<![A-Za-z0-9_])' : '';
-  const right = b === 'right' || b === 'both' ? `(?![${chars}])` : '';
+  const left = b === 'left' || b === 'both' || b === 'word' ? '(?<![A-Za-z0-9_])' : '';
+  const right = b === 'right' || b === 'both' ? `(?![${chars}])` : b === 'word' ? '(?![A-Za-z0-9_])' : '';
   return new RegExp(`${left}${esc(prefix)}[${chars}]${q}${right}`, 'g');
 }
 
@@ -31,6 +32,113 @@ export function tokenRegex(prefix, chars, min, max = null, opts = {}) {
 // (a strict char class usually already rejects them, e.g. "SUA_CHAVE" has '_').
 export function looksLikePlaceholder(s) {
   return /x{6,}|X{6,}|your|sua_|seu_|aqui|here|change|exemplo|example|placeholder|dummy|<|>|\.\.\.|\*{3,}/i.test(s);
+}
+
+// Placeholder "all characters equal" (e.g. key_xxxxxxxx). ex: allSameChar('xxxx') === true
+export const allSameChar = (s) => s.length > 0 && [...s].every((c) => c === s[0]);
+
+// URLs with credentials "scheme://user:pass@". Returns [{ user, pass, userinfo: 'user:pass', index }].
+// Default char rules: user = no space / : @ quotes < >; pass = no space / @ quotes < >.
+export function findUrlCredentials(line, opts = {}) {
+  const re = opts.re || /https?:\/\/([^\s\/:@"'`<>]+):([^\s\/@"'`<>]+)@/g;
+  return matchAll(line, re).map((m) => ({ user: m.groups[0], pass: m.groups[1], userinfo: `${m.groups[0]}:${m.groups[1]}`, index: m.index }));
+}
+
+// atob("...") / atob('...') literals decoded with STANDARD base64. Returns [{ encoded, decoded, index }].
+export function findAtobLiterals(line) {
+  return matchAll(line, /(?<![A-Za-z0-9_$])atob\(\s*(["'])([^"']*)\1\s*\)/g).map((m) => ({ encoded: m.groups[1], decoded: Buffer.from(m.groups[1], 'base64').toString('utf8'), index: m.index }));
+}
+
+// PEM blocks across lines. BEGIN line matches opts.begin (default private keys: "-----BEGIN [WORD ]PRIVATE KEY-----"),
+// block ends at the next line containing "-----END ". Returns [{ beginLine (1-based), endLine, body (inner lines trimmed, joined with '') }].
+export function findPemBlocks(lines, opts = {}) {
+  const begin = opts.begin || /-----BEGIN (?:[A-Z0-9]+ )?PRIVATE KEY-----/;
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (!begin.test(lines[i])) continue;
+    let j = i + 1;
+    while (j < lines.length && !lines[j].includes('-----END ')) j++;
+    out.push({ beginLine: i + 1, endLine: j < lines.length ? j + 1 : null, body: lines.slice(i + 1, j).map((l) => l.trim()).join('') });
+    i = j;
+  }
+  return out;
+}
+
+// ---------- taint helpers (simple line-by-line data flow) ----------
+// Whole-name occurrence: no [A-Za-z0-9_$.] right before, no [A-Za-z0-9_$] right after (configurable).
+// ex: containsName('x = dados.termo', 'termo') === false; containsName('f(termo)', 'termo') === true
+export function containsName(text, name, opts = {}) {
+  const before = opts.before ?? 'A-Za-z0-9_$.';
+  const after = opts.after ?? 'A-Za-z0-9_$';
+  return new RegExp(`(?<![${before}])${esc(name)}(?![${after}])`).test(text);
+}
+
+// Variable assignment at the start of a line: "[const|let|var] name = expr" ('=' not part of == / ===, not +=).
+// expr ends at the first ';' (or end of line). Returns { keyword, name, expr } or null.
+// opts.requireKeyword: only declarations. ex: parseVarAssignment('let q = location.hash;') -> { keyword:'let', name:'q', expr:' location.hash' }
+export function parseVarAssignment(line, opts = {}) {
+  const m = line.match(/^\s*(?:(const|let|var)\s+)?([A-Za-z_$][A-Za-z0-9_$]*)\s*=(?!=)(.*)$/);
+  if (!m) return null;
+  if (opts.requireKeyword && !m[1]) return null;
+  const rest = m[3];
+  const semi = rest.indexOf(';');
+  return { keyword: m[1] || null, name: m[2], expr: semi === -1 ? rest : rest.slice(0, semi) };
+}
+
+// Tracker of tainted variable names. tainted(text) = contains a source or a tainted name AND no sanitizer.
+// ex: const t = taintTracker({ sources: ['location.hash'], sanitizers: ['encodeURIComponent('] });
+//     t.isTainted('a + location.hash'); t.assign('q', expr); t.names
+export function taintTracker({ sources = [], sanitizers = [], nameOpts = {} } = {}) {
+  const names = new Set();
+  const extra = new Set();
+  const api = {
+    names,
+    addSource: (s) => extra.add(s),
+    removeSource: (s) => extra.delete(s),
+    isTainted(text) {
+      const hit = [...sources, ...extra].some((s) => text.includes(s)) || [...names].some((n) => containsName(text, n, nameOpts));
+      return hit && !sanitizers.some((z) => text.includes(z));
+    },
+    assign(name, expr) { if (api.isTainted(expr)) names.add(name); else names.delete(name); },
+  };
+  return api;
+}
+
+// Sink occurrences with their segment (text after the sink up to the next stop char). For any sink list.
+// ex: sinkSegments(line, [REDIRECT_SINKS.locationHref]) -> [{ sink, index, segment }]
+export function sinkSegments(line, sinks, stop = ';') {
+  const out = [];
+  for (const re of sinks) for (const m of matchAll(line, re)) out.push({ sink: m.text, index: m.index, segment: segmentAfter(line, m.end, stop) });
+  return out.sort((a, b) => a.index - b.index);
+}
+
+export const EXEC_SINKS = { eval: /(?<![A-Za-z0-9_$])eval\(/g, newFunction: /new\s+Function\(/g };
+export const REDIRECT_SINKS = {
+  locationHref: /location\.href\s*=(?!=)/g,
+  windowLocation: /window\.location\s*=(?!=)/g,
+  locationAssign: /location\.assign\(/g,
+  locationReplace: /location\.replace\(/g,
+  windowOpen: /window\.open\(/g,
+};
+
+// message listeners: addEventListener("message", (p) => / p => / function (p) ... block until a line starting with "})".
+// Returns [{ line (1-based), param, endLine, checksOrigin }]. checksOrigin = some block line has "<p>.origin ===" or "!==".
+export function findMessageListeners(lines, opts = {}) {
+  const out = [];
+  const open = /addEventListener\(\s*(["'])message\1\s*,\s*(?:\(\s*([A-Za-z_$][\w$]*)\s*\)\s*=>|([A-Za-z_$][\w$]*)\s*=>|function\s*\w*\s*\(\s*([A-Za-z_$][\w$]*)\s*\))/;
+  const isEnd = opts.isEnd || ((l) => l.trim().startsWith('})'));
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(open);
+    if (!m) continue;
+    const param = m[2] || m[3] || m[4];
+    let j = i + 1;
+    while (j < lines.length && !isEnd(lines[j])) j++;
+    const end = j < lines.length ? j : lines.length - 1;
+    const chk = opts.checkRe || new RegExp(`(?<![A-Za-z0-9_$.])${esc(param)}\\.origin\\s*(===|!==)`);
+    const block = lines.slice(i, end + 1);
+    out.push({ line: i + 1, param, endLine: end + 1, checksOrigin: block.some((l) => chk.test(l)) });
+  }
+  return out;
 }
 
 // Find calls of a function name. Default: name must not be preceded by [A-Za-z0-9_$]

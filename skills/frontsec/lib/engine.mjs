@@ -8,7 +8,7 @@ import { txt } from './util.mjs';
 //   rules: [{ code, exts: ['.js', '.html'], detect(line, ctx) }]
 //     detect returns: false/0/null/[] (nothing) | true (1 hit) | array of hits (objects, e.g. { cred: 'the-secret' })
 //     ctx = { file (posix, relative to root), lineNo (1-based), ext, root, lines (all lines of the file) }
-//   exts: which files are read at all (default ['.js', '.html']).
+//   exts: which files are read at all (default ['.js', '.html']; 'all' = every file of any extension).
 // Returns {
 //   findings: unique { rule, file, line } (one per rule+file+line), sorted file(text) -> line(num) -> rule(text)
 //   hits: every raw hit { rule, file, line, ...hitObject } (use for "group by credential" etc.)
@@ -18,7 +18,7 @@ import { txt } from './util.mjs';
 export function scanTree(root, opts = {}) {
   const exts = opts.exts || ['.js', '.html'];
   const rules = opts.rules || [];
-  const files = walk(root, { exts });
+  const files = walk(root, exts === 'all' ? {} : { exts });
   const hits = [];
   const seen = new Map();
   for (const file of files) {

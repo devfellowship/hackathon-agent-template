@@ -185,3 +185,87 @@ export function runJar(steps, host, opts = {}) {
 export const deletedInStep = (rec, i) => rec.deletions.some((d) => d.stepIndex === i);
 // Was it set in any step strictly before index i?
 export const setBefore = (rec, i) => rec.sets.some((s) => s.stepIndex < i);
+
+// ---------- URL + full browser jar (store, reject, expire, send) ----------
+// parseUrl('https://Loja.x.test/conta/itens?a=1') -> { scheme:'https', host:'loja.x.test', path:'/conta/itens', query:'a=1' }
+// Empty path -> '/'. Query and fragment removed from path.
+export function parseUrl(url) {
+  const m = String(url).match(/^([a-zA-Z][a-zA-Z0-9+.-]*):\/\/([^\/?#]*)([^?#]*)(?:\?([^#]*))?/);
+  if (!m) return null;
+  const hostPort = m[2].replace(/^[^@]*@/, '');
+  return { scheme: m[1].toLowerCase(), host: hostPort.replace(/:\d+$/, '').toLowerCase(), path: m[3] || '/', query: m[4] ?? '' };
+}
+
+// ISO without milliseconds: '2026-10-21T13:00:00Z'. null stays null.
+export const isoNoMs = (ms) => (ms === null || ms === undefined ? null : new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z'));
+
+// Default rejection checks, in order (each returns true when the cookie must be REJECTED):
+export const REJECT_CHECKS = {
+  secure_on_http: (c, u) => hasAttr(c, 'secure') && u.scheme === 'http',
+  public_suffix: (c, u, o) => !c.hostOnly && (o.publicSuffixes || []).includes(c.domain),
+  domain_mismatch: (c, u) => !c.hostOnly && !domainMatches(u.host, c.domain),
+  host_prefix: (c) => c.name.startsWith('__Host-') && (!hasAttr(c, 'secure') || hasAttr(c, 'domain') || attrValue(c, 'path') !== '/'),
+  secure_prefix: (c) => c.name.startsWith('__Secure-') && !hasAttr(c, 'secure'),
+  samesite_none_insecure: (c) => sameSite(c) === 'none' && !hasAttr(c, 'secure'),
+};
+
+// Browser cookie jar.
+// const jar = createJar({ publicSuffixes: ['test'], checks: [['secure_on_http','<spec reason>'], ...], sameSiteDefault: 'lax' })
+//   checks: ordered [checkName | fn(c, url, opts), reasonLabel]; default = all REJECT_CHECKS in the order above with their own names.
+// jar.expire(timeIso)                  remove cookies with expiresAt <= time
+// jar.receive(url, timeIso, headers)   -> [{ action: 'set'|'replace'|'delete'|'noop-delete'|'rejected', reason?, cookie }]
+//   replace keeps the ORIGINAL creation position; delete removes the same identity (name+domain+path) only.
+// jar.cookiesFor(url, { context: 'same-site'|'cross-site', method, navigation, isSameSite }) -> cookies to send,
+//   ordered by longer path first, then older creation first. SameSite: strict same-site only; lax same-site or
+//   (cross-site + navigation + GET); none always. Secure only on https.
+// jar.list() -> cookies [{ name, value, domain, path, hostOnly, expiresAt, created, cookie }]
+export function createJar(opts = {}) {
+  const store = new Map(); // identity -> entry
+  let seq = 0;
+  const checks = (opts.checks || Object.keys(REJECT_CHECKS).map((k) => [k, k])).map(([chk, label]) => [typeof chk === 'function' ? chk : REJECT_CHECKS[chk], label]);
+  const ssDefault = opts.sameSiteDefault ?? 'lax';
+  return {
+    store,
+    expire(time) {
+      const t = Date.parse(time);
+      for (const [k, e] of store) if (e.expiresAt !== null && e.expiresAt <= t) store.delete(k);
+    },
+    receive(url, time, headers) {
+      const u = typeof url === 'string' ? parseUrl(url) : url;
+      const res = [];
+      for (const h of headers) {
+        const c = interpretSetCookie(h, { host: u.host, path: u.path, time });
+        const bad = checks.find(([fn]) => fn(c, u, opts));
+        if (bad) { res.push({ action: 'rejected', reason: bad[1], cookie: c }); continue; }
+        const prev = store.get(c.identity);
+        if (c.isDeletion) {
+          if (prev) store.delete(c.identity);
+          res.push({ action: prev ? 'delete' : 'noop-delete', cookie: c });
+          continue;
+        }
+        const entry = { name: c.name, value: c.value, domain: c.domain, path: c.path, hostOnly: c.hostOnly, expiresAt: c.expiresAt, created: prev ? prev.created : seq++, cookie: c };
+        store.set(c.identity, entry);
+        res.push({ action: prev ? 'replace' : 'set', cookie: c });
+      }
+      return res;
+    },
+    cookiesFor(url, ctx = {}) {
+      const u = typeof url === 'string' ? parseUrl(url) : url;
+      const sameSiteCtx = ctx.isSameSite ?? ctx.context === 'same-site';
+      return [...store.values()].filter((e) => {
+        const c = e.cookie;
+        if (e.hostOnly ? u.host !== e.domain : !domainMatches(u.host, e.domain)) return false;
+        if (!pathMatches(u.path, e.path)) return false;
+        if (hasAttr(c, 'secure') && u.scheme !== 'https') return false;
+        const ss = sameSite(c, { missing: ssDefault, invalid: ssDefault });
+        if (ss === 'strict') return sameSiteCtx;
+        if (ss === 'lax') return sameSiteCtx || (!!ctx.navigation && String(ctx.method || '').toUpperCase() === 'GET');
+        return true;
+      }).sort((a, b) => b.path.length - a.path.length || a.created - b.created);
+    },
+    list() { return [...store.values()]; },
+  };
+}
+
+// "a=1; b=2" from a list of cookies. ex: cookieHeader(jar.cookiesFor(url, ctx))
+export const cookieHeader = (cookies) => cookies.map((e) => `${e.name}=${e.value}`).join('; ');
