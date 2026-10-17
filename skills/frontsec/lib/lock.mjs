@@ -37,6 +37,9 @@ export function normalizeLock(lock) {
   return { packages, version: lock.lockfileVersion ?? 1 };
 }
 
+// Accept a whole lockfile (any version) or an already-normalized packages map.
+export const asPkgs = (x) => ('' in x && !x.lockfileVersion ? x : normalizeLock(x).packages);
+
 // Node resolution: from install key `from` ('' = project root) look for dep `name`:
 // from/node_modules/name, then cut the last "/node_modules/<x>" and retry, ..., finally node_modules/name.
 // Returns the install key or null. ex: resolveDep(pkgs, 'node_modules/a/node_modules/b', 'c')
@@ -64,7 +67,7 @@ export function depNames(entry, fields = ['dependencies', 'optionalDependencies'
 // opts.rootFields / opts.depFields choose which dependency maps are followed.
 // opts.cmpPath to change tie-break (default shortest then text).
 export function resolveTree(lockOrPkgs, opts = {}) {
-  const pkgs = lockOrPkgs.packages ? normalizeLock(lockOrPkgs).packages : lockOrPkgs;
+  const pkgs = asPkgs(lockOrPkgs);
   const rootFields = opts.rootFields || ['dependencies', 'devDependencies', 'optionalDependencies'];
   const depFields = opts.depFields || ['dependencies', 'optionalDependencies'];
   const cmpPath = opts.cmpPath || ((a, b) => a.length - b.length || cmpArrays(a, b));
@@ -121,6 +124,6 @@ export function resolveTree(lockOrPkgs, opts = {}) {
 
 // All installed packages (every key except the root) as [{ key, name, version, entry }].
 export function installed(lockOrPkgs) {
-  const pkgs = lockOrPkgs.packages ? normalizeLock(lockOrPkgs).packages : lockOrPkgs;
+  const pkgs = asPkgs(lockOrPkgs);
   return Object.keys(pkgs).filter((k) => k && k.includes('node_modules/')).map((k) => ({ key: k, name: nameOf(k), version: pkgs[k].version, entry: pkgs[k] }));
 }
