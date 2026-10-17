@@ -5,6 +5,7 @@
 # Usa o AGENTS.md, o CLAUDE.md e o skills/ do jeito que estão no disco agora (sem precisar de commit).
 # Modelo padrão: um modelo GRÁTIS do OpenRouter. Troque com MODEL=openrouter/<id>.
 # Assinante do OpenCode Go: MODEL=go roda opencode-go/deepseek-v4.1-flash, o mesmo modelo da final (login: opencode auth login).
+# Com chave da API da DeepSeek: MODEL=deepseek roda deepseek/deepseek-flash (= DeepSeek V4.1 Flash), com DEEPSEEK_API_KEY.
 # A avaliação final usa deepseek-v4.1-flash (paga pela DFL).
 # Precisa de: node 22+, npm e git. Usa o opencode instalado ou baixa com npx.
 # Resumo em JSON (para o seu CLI ler): /tmp/dfl-eval/ultimo.json
@@ -12,7 +13,10 @@ set -euo pipefail
 AGENT="$(cd "$(dirname "$0")/.." && pwd)"
 ARG="${1:?uso: evals/run-local.sh <p1|p2|p3|biblioteca|pasta-da-task> [vezes]}"; N="${2:-1}"
 MODEL="${MODEL:-openrouter/nvidia/nemotron-3-super-120b-a12b:free}"
-[ "$MODEL" = go ] && MODEL=opencode-go/deepseek-v4.1-flash
+case "$MODEL" in
+  go) MODEL=opencode-go/deepseek-v4.1-flash ;;
+  deepseek) MODEL=deepseek/deepseek-flash ;;
+esac
 TIMEOUT="${TIMEOUT:-600}"
 OUTDIR="/tmp/dfl-eval"; mkdir -p "$OUTDIR"
 
@@ -33,6 +37,7 @@ fi
 if command -v opencode >/dev/null 2>&1; then OPENCODE=(opencode); else OPENCODE=(npx -y opencode-ai@latest); fi
 case "$MODEL" in
   openrouter/*) [ -n "${OPENROUTER_API_KEY:-}" ] || echo "aviso: OPENROUTER_API_KEY não está definida" ;;
+  deepseek/*) [ -n "${DEEPSEEK_API_KEY:-}" ] || echo "aviso: DEEPSEEK_API_KEY não está definida" ;;
   opencode-go/*) echo "usando o OpenCode Go (precisa de login: opencode auth login → OpenCode Go)" ;;
 esac
 

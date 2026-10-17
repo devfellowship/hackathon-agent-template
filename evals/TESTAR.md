@@ -1,6 +1,8 @@
 # Como o seu CLI testa o agente da equipe
 
 Isto é para o CLI que vocês usam para PROGRAMAR (Claude Code, Codex, Gemini CLI, Cursor, opencode).
+O modelo do seu CLI (Cursor Auto, Opus, DeepSeek...) não importa: ele só edita os arquivos. Quem roda o agente é sempre
+o opencode com o modelo escolhido em `MODEL`, igual à final.
 Você, CLI, **não é o agente avaliado**. O agente avaliado é o `AGENTS.md` (ou `CLAUDE.md`) + `skills/` deste repo,
 rodado pelo TestMyAgent com opencode e o modelo `deepseek-v4.1-flash`. Seu trabalho é melhorar esses arquivos
 e medir com o mesmo runner. Não resolva os casos você mesmo.
@@ -17,6 +19,9 @@ evals/run-local.sh biblioteca 1  # task de treino deste repo
 - Duas formas de pagar o modelo:
   - **OpenCode Go** (assinatura): `MODEL=go evals/run-local.sh p1 3`. Roda `opencode-go/deepseek-v4.1-flash`, o mesmo
     modelo da final, então é o teste mais fiel. Precisa de login uma vez: `opencode auth login` → OpenCode Go.
+  - **Chave da API da DeepSeek** (a mesma que se usa para ligar o Claude Code na DeepSeek):
+    `export DEEPSEEK_API_KEY=...` e `MODEL=deepseek evals/run-local.sh p1 3`. Roda `deepseek/deepseek-flash`, que é o
+    DeepSeek V4.1 Flash, o modelo da final.
   - **OpenRouter**: `OPENROUTER_API_KEY` no ambiente; o padrão é um modelo grátis (substituto do modelo da final).
   - Se nenhum dos dois estiver configurado, peça à pessoa. Nunca escreva a chave em arquivo.
 - Usa os arquivos como estão no disco: não precisa de commit.

@@ -46,7 +46,8 @@ evals/run-local.sh biblioteca 3  # task de treino deste repo
 ```
 
 **Tem OpenCode Go?** Rode com `MODEL=go evals/run-local.sh p1 3`: usa `opencode-go/deepseek-v4.1-flash`, o mesmo modelo
-da final (faça `opencode auth login` → OpenCode Go antes). É o teste local mais fiel.
+da final (faça `opencode auth login` → OpenCode Go antes). **Tem chave da API da DeepSeek?** `export DEEPSEEK_API_KEY=...` e
+`MODEL=deepseek evals/run-local.sh p1 3` (roda `deepseek-flash`, o V4.1 Flash). Os dois são o teste local mais fiel.
 
 O placar sai por caso e etapa (`exemplo-3 · cookies`) e também em `/tmp/dfl-eval/ultimo.json`.
 
