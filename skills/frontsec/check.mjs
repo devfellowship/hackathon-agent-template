@@ -56,6 +56,14 @@ for (const c of cases) {
     for (const [k, v] of Object.entries(data)) if (v === null) errors.push(`${f}: "${k}" is null (did that stage crash? see solver stderr)`);
   }
   if (example) shape(data, example, c);
+  // sanity: very long lists are usually false positives (a detect that fires everywhere)
+  const big = (v, path) => {
+    if (Array.isArray(v)) { if (v.length > 60) warnings.push(`${path} has ${v.length} items — suspicious, check for false positives`); v.forEach((x, i) => big(x, `${path}[${i}]`)); }
+    else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) big(x, `${path}.${k}`);
+  };
+  big(data, c);
+  const counts = data && typeof data === 'object' ? Object.entries(data).map(([k, v]) => `${k}:${Array.isArray(v) ? v.length : v && typeof v === 'object' ? Object.entries(v).filter(([, x]) => Array.isArray(x)).map(([n, x]) => `${n}=${x.length}`).join(',') : typeof v}`).join(' ') : '';
+  console.log(`${c}: ${counts}`);
   if (intsOnly) walkNumbers(data, c);
 }
 try {

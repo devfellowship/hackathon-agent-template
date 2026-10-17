@@ -21,6 +21,7 @@ export function scanTree(root, opts = {}) {
   const files = walk(root, exts === 'all' ? {} : { exts });
   const hits = [];
   const seen = new Map();
+  const stats = Object.fromEntries(rules.map((r) => [r.code, { lines: 0, hitLines: 0 }]));
   for (const file of files) {
     const ext = extOf(file);
     const lines = splitLines(readText(join(root, file)), { stripCR: opts.stripCR });
@@ -28,7 +29,9 @@ export function scanTree(root, opts = {}) {
       const ctx = { file, lineNo: i + 1, ext, root, lines };
       for (const r of rules) {
         if (r.exts && !r.exts.includes(ext)) continue;
+        stats[r.code].lines++;
         const res = r.detect(line, ctx);
+        if (res === true || (Array.isArray(res) && res.length) || (typeof res === 'number' && res > 0)) stats[r.code].hitLines++;
         const arr = res === true ? [{}] : Array.isArray(res) ? res : typeof res === 'number' && res > 0 ? Array.from({ length: res }, () => ({})) : [];
         for (const h of arr) {
           const hit = { rule: r.code, file, line: i + 1, ...(h && typeof h === 'object' ? h : {}) };
@@ -40,7 +43,14 @@ export function scanTree(root, opts = {}) {
     });
   }
   const findings = [...seen.values()].sort((a, b) => txt(a.file, b.file) || a.line - b.line || txt(a.rule, b.rule));
-  return { findings, hits, files };
+  // Sanity alarm: a rule that fires on most lines is almost always a broken detect (e.g. `x ? [{}] : []` — [] is truthy!).
+  for (const [code, st] of Object.entries(stats)) {
+    if (opts.quiet) break;
+    if (st.lines >= 10 && st.hitLines > 3 && st.hitLines / st.lines > (opts.alarmRatio ?? 0.3)) {
+      console.error(`WARNING (likely BUG): rule ${code} fired on ${st.hitLines}/${st.lines} lines in ${root}. Check its detect: return the finder's array or a real boolean, never \`cond ? [{}] : []\`.`);
+    }
+  }
+  return { findings, hits, files, stats };
 }
 
 // Banners per file: Map file -> [{ name, version, id }]. Only files with the given extensions (default .js).

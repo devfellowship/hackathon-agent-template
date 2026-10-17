@@ -152,10 +152,17 @@ export function buildGraph(lockOrPkgs, opts = {}) {
 }
 
 // DIRECT dependencies of a package (one hop): install keys it resolves to. ex: directDependencies(g, 'node_modules/a')
-export const directDependencies = (g, key) => [...(g.out.get(key) || [])];
+export const directDependencies = (g, key, opts = {}) => {
+  const gr = g && g.out instanceof Map ? g : buildGraph(g, opts);
+  return [...(gr.out.get(key) || [])];
+};
 // DIRECT dependents (one hop): who requires this exact install. '' = the project root.
 // ex: directDependents(g, 'node_modules/c').map(nameOf)  -> ['a', 'z'] (the root shows as '')
-export const directDependents = (g, key) => [...(g.in.get(key) || [])];
+// Also accepts a lockfile: directDependents(lock, key, { rootFields: ['dependencies'], skipDev: true }).
+export const directDependents = (g, key, opts = {}) => {
+  const gr = g && g.in instanceof Map ? g : buildGraph(g, opts);
+  return [...(gr.in.get(key) || [])];
+};
 
 function reach(map, key) {
   const seen = new Set();

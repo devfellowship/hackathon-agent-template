@@ -63,3 +63,33 @@ test('deps: per copy, skip dev, declared range', () => {
   assert.deepEqual(L.directDependents(g, 'node_modules/a/node_modules/x'), ['node_modules/a']);
   assert.equal(L.declaredRange(g, 'node_modules/a', 'x'), '^1.0.0');
 });
+
+test('engine alarm on always-firing rule and directDependents(lock)', async () => {
+  const { mkdtempSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const root = mkdtempSync(join(tmpdir(), 'al-'));
+  writeFileSync(join(root, 'a.js'), Array.from({ length: 20 }, (_, i) => `x${i}`).join('\n'));
+  const errs = [];
+  const orig = console.error;
+  console.error = (m) => errs.push(m);
+  const r = L.scanTree(root, { rules: [{ code: 'BAD', detect: (l) => (l.includes('zzz') ? [{}] : []) || [{}] }, { code: 'OOPS', detect: (l) => [] && [{}] }] });
+  console.error = orig;
+  assert.equal(r.stats.OOPS.hitLines, 20);
+  assert.ok(errs.some((e) => e.includes('rule OOPS')));
+  const lock = { lockfileVersion: 3, packages: { '': { dependencies: { a: '1' } }, 'node_modules/a': { version: '1.0.0', dependencies: { b: '1' } }, 'node_modules/b': { version: '1.0.0' } } };
+  assert.deepEqual(L.directDependents(lock, 'node_modules/b'), ['node_modules/a']);
+  assert.deepEqual(L.directDependents(lock, 'node_modules/a'), ['']);
+});
+
+test('rule factories always return arrays', () => {
+  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  const tok = `eyJhbGciOiJIUzI1NiJ9.${b64({ role: 'admin' })}.c2ln`;
+  assert.deepEqual(L.ruleJwt('J', (p) => p?.role !== 'anon').detect(`a="${tok}"`).map((h) => h.cred), [tok]);
+  assert.deepEqual(L.ruleJwt('J', (p) => p?.role !== 'anon').detect('nothing'), []);
+  assert.equal(L.ruleSecret('S', [L.tokenRegex('k_', 'a-z', 3)]).detect('k_abc k_ab').length, 1);
+  assert.equal(L.ruleScriptSrc('H', (s) => s.startsWith('http://')).detect('<script src="http://x/a.js"></script>').length, 1);
+  assert.equal(L.ruleStorageKey('T', ['token']).detect("localStorage.setItem('Auth_Token', v)").length, 1);
+  assert.deepEqual(L.ruleSourceMap('M', '/nonexistent').detect('//# sourceMappingURL=data:x', { file: 'a.js' }).length, 1);
+  assert.deepEqual(L.ruleRegex('R', /debugger/g).detect('x'), []);
+});

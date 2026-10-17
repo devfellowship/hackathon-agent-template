@@ -20,20 +20,25 @@ const WORST = 'F'; // TODO(spec): grade forced by a critical finding
 // ============ STAGE: scan files (+ headers) ============
 function stageScan(dir) {
   const root = join(dir, 'dist'); // TODO(spec): folder of the build
+  // One entry per README rule that looks at file LINES. Use the ready factories (they always return arrays):
+  //   L.ruleSecret(code, [regex...], { reject })   L.ruleJwt(code, (payload) => isFinding)   L.ruleSink(code, { sources, sinks })
+  //   L.ruleDynamicCode(code, { names })           L.ruleScriptSrc(code, (src) => test)      L.ruleStorageKey(code, words)
+  //   L.ruleBlankLink(code, { exactTarget })       L.ruleSourceMap(code, root)              L.ruleRegex(code, /re/g)   L.ruleStringTimer(code)
+  // Hand-written rule: { code, exts, detect: (line, ctx) => ARRAY of hits } — return the finder's array (e.g. L.findJwts(l).filter(...)).
+  // NEVER write `cond ? [{}] : []` or `arr ? ... : ...`: an empty array [] is TRUTHY in JS and fires on every line.
+  // Delete every line below whose rule is not in the README; replace 'CODE_x' with the README codes. EXAMPLES:
   const rules = [
-    // One entry per README rule that looks at file LINES. detect returns true/false or an array of hits.
-    // Return objects with `cred` when the plan groups by credential text.
-    // EXAMPLES (adapt codes, regexes, lists to the README):
-    // { code: 'R1', exts: ['.js', '.html'], detect: (l) => L.matchAll(l, L.tokenRegex('sk_live_', 'A-Za-z0-9', 24)).map((m) => ({ cred: m.text })) },
-    // { code: 'R3', exts: ['.js', '.html'], detect: (l) => L.findJwts(l).filter((j) => !['anon'].includes(j.payload?.role)).map((j) => ({ cred: j.token })) },
-    // { code: 'R4', exts: ['.js', '.html'], detect: (l) => L.findSinkWithSource(l, { sources: ['location.hash'] }) },
-    // { code: 'R5', exts: ['.js', '.html'], detect: (l) => L.findDynamicCode(l, { names: ['eval', 'new Function'] }) },
-    // { code: 'R6', exts: ['.html'], detect: (l) => L.scriptSrcs(l).filter((s) => s.src.startsWith('http://')) },
-    // { code: 'R7', exts: ['.js', '.html'], detect: (l) => L.findStorageSets(l).filter((s) => s.keyIsLiteral && L.containsAnyCI(s.key, ['token'])) },
-    // { code: 'R8', exts: ['.html'], detect: (l) => L.unsafeBlankLinks(l, { exactTarget: true }) },
-    // { code: 'R11', exts: ['.js'], detect: (l, ctx) => { const r = L.findSourceMapRef(l); return !!r && (r.isDataUri || L.existsIn(root, L.resolveFrom(ctx.file, r.target))); } },
+    // L.ruleSecret('CODE_secret', [L.tokenRegex('sk_live_', 'A-Za-z0-9', 24), L.tokenRegex('key_', '0-9a-f', 32, 32)]),
+    // L.ruleJwt('CODE_jwt', (p) => !['anon'].includes(p?.role)),
+    // L.ruleSink('CODE_xss', { sources: ['location.hash', 'location.search'] }),
+    // L.ruleDynamicCode('CODE_eval'),
+    // L.ruleScriptSrc('CODE_http_script', (src) => src.startsWith('http://')),
+    // L.ruleStorageKey('CODE_storage', ['token']),
+    // L.ruleBlankLink('CODE_blank', { exactTarget: true }),
+    // L.ruleSourceMap('CODE_map', root),
   ];
-  const { findings, hits } = L.scanTree(root, { rules, exts: ['.js', '.html'] }); // TODO(spec): which extensions are read
+  const { findings, hits } = L.scanTree(root, { rules, exts: ['.js', '.html'] }); // TODO(spec): which extensions are read ('all' = any)
+  // A 'WARNING (likely BUG)' on stderr means a detect fires on almost every line: fix it before going on.
 
   // Header rules (one finding max each). EXAMPLE:
   const headers = L.readJsonOr(join(dir, 'headers.json'), {});

@@ -62,6 +62,13 @@ Se o README diz diferente de um padrão, passe a opção ou escreva a regra à m
 - `scanTree(root, { rules, exts })` roda regras por linha em todos os arquivos (`exts: 'all'` = qualquer extensão).
   `rules = [{ code, exts, detect(linha, ctx) }]`; `detect` devolve `true/false` ou array de achados (objetos, ex.: `{ cred }`).
   `ctx = { file, lineNo, ext, root, lines }`. Retorna `{ findings: [{rule,file,line}] únicos e ordenados, hits: todos os brutos }`.
+- **Regras prontas** (use estas; `detect` sempre devolve array): `L.ruleSecret(code, [regex...], {reject})` (hit.cred = texto),
+  `L.ruleJwt(code, (payload) => éAchado)` (hit.cred = token), `L.ruleSink(code, {sources, sinks})`, `L.ruleDynamicCode(code, {names})`,
+  `L.ruleStringTimer(code)`, `L.ruleScriptSrc(code, (src) => teste)`, `L.ruleStorageKey(code, palavras)`, `L.ruleBlankLink(code, {exactTarget})`,
+  `L.ruleSourceMap(code, root)`, `L.ruleRegex(code, /re/g)`. Opção `exts` em todas.
+- **Bug clássico:** `detect: (l) => achou ? [{}] : []` com `achou` sendo um array → `[]` é VERDADEIRO em JS e a regra dispara em toda linha.
+  Devolva o array do finder (`L.findJwts(l).filter(...)`) ou um boolean de verdade (`arr.length > 0`).
+  O `scanTree` imprime `WARNING (likely BUG)` quando uma regra dispara em mais de 30% das linhas: trate como bug.
 - `bannersByFile(root)` → Map arquivo → `[{ name, version, id: 'nome@versao' }]` (banners `/*! nome@1.2.3`, só `.js`)
 
 ### scan (texto)
@@ -114,8 +121,8 @@ Se o README diz diferente de um padrão, passe a opção ou escreva a regra à m
 - `resolveTree(lock, { rootFields, depFields })` BFS da raiz → Map chave → `{ name, version, path (nomes), keys, viaDevOnly }`; caminho = mais curto, empate por texto. Padrão raiz: `dependencies`+`devDependencies`+`optionalDependencies` (siga o README!)
 - `installed(lock)` todos os pacotes instalados
 - Grafo: `const g = L.buildGraph(lock, { rootFields, depFields })` (nós = chaves de instalação, raiz = `''`).
-  **Escolha a relação que o README DEFINE — leia a definição ao pé da letra:**
-  - "dependentes diretos / quem depende de X" (1 passo): `L.directDependents(g, chave)` → ex.: `c` é exigido por `a` e `z` → `['node_modules/a','node_modules/z']`
+  **Escolha a relação que o README DEFINE — leia a definição ao pé da letra.** "Dependente" quase sempre = aresta DIRETA (`directDependents`); "caminho"/"ancestrais" = transitivo (`resolveTree` / `allDependents`).
+  - "dependentes diretos / quem depende de X" (1 passo): `L.directDependents(g, chave)` (ou `L.directDependents(lock, chave, { rootFields: ['dependencies'], skipDev: true })`) → ex.: `c` é exigido por `a` e `z` → `['node_modules/a','node_modules/z']`
   - "todos que dependem de X, direta ou indiretamente" (ancestrais): `L.allDependents(g, chave)`
   - "dependências diretas de X": `L.directDependencies(g, chave)`; "todas (transitivas)": `L.allDependencies(g, chave)`
   - "caminho" (um só, mais curto): `resolveTree(...).get(chave).path`; "todos os caminhos": `L.allPathsTo(g, chave)`
