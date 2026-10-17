@@ -30,16 +30,16 @@ test('taint tracking and listeners', () => {
 });
 
 test('browser jar: reject, replace keeps position, delete, send order', () => {
-  const jar = L.createJar({ publicSuffixes: ['test'] });
-  const r = jar.receive('https://loja.cafe.test/conta/entrar', '2026-10-20T13:00:00Z', [
-    'sid=1; Path=/; Secure', 'c=1', 'bad=1; Domain=test', 'x=1; Domain=api.cafe.test', 'n=1; SameSite=None', 'p=1; Domain=.cafe.test; Path=/conta; Max-Age=60',
+  const jar = L.createJar({ publicSuffixes: ['example'] });
+  const r = jar.receive('https://loja.shop.example/conta/entrar', '2026-10-20T13:00:00Z', [
+    'sid=1; Path=/; Secure', 'c=1', 'bad=1; Domain=example', 'x=1; Domain=api.shop.example', 'n=1; SameSite=None', 'p=1; Domain=.shop.example; Path=/conta; Max-Age=60',
   ]);
   assert.deepEqual(r.map((x) => x.reason || x.action), ['set', 'set', 'public_suffix', 'domain_mismatch', 'samesite_none_insecure', 'set']);
-  jar.receive('https://loja.cafe.test/', '2026-10-20T13:00:10Z', ['sid=2; Path=/; Secure']);
-  const send = jar.cookiesFor('https://loja.cafe.test/conta/x', { context: 'same-site' });
+  jar.receive('https://loja.shop.example/', '2026-10-20T13:00:10Z', ['sid=2; Path=/; Secure']);
+  const send = jar.cookiesFor('https://loja.shop.example/conta/x', { context: 'same-site' });
   assert.equal(L.cookieHeader(send), 'c=1; p=1; sid=2');
-  assert.equal(L.cookieHeader(jar.cookiesFor('https://api.cafe.test/conta', { context: 'cross-site', navigation: true, method: 'GET' })), 'p=1');
-  assert.equal(L.cookieHeader(jar.cookiesFor('https://api.cafe.test/conta', { context: 'cross-site', method: 'POST' })), '');
+  assert.equal(L.cookieHeader(jar.cookiesFor('https://api.shop.example/conta', { context: 'cross-site', navigation: true, method: 'GET' })), 'p=1');
+  assert.equal(L.cookieHeader(jar.cookiesFor('https://api.shop.example/conta', { context: 'cross-site', method: 'POST' })), '');
   jar.expire('2026-10-20T13:01:00Z');
   assert.deepEqual(jar.list().map((e) => e.name), ['sid', 'c']);
   assert.equal(L.isoNoMs(Date.parse('2026-10-20T13:01:00.000Z')), '2026-10-20T13:01:00Z');
