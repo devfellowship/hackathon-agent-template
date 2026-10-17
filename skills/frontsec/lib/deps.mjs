@@ -54,5 +54,5 @@ const cmpNames = (a, b) => {
 };
 
 // Map advisories with any field names to { id, pkg, range, severity }.
-// ex: mapAdvisories(db.avisos, { id: 'id', pkg: 'pacote', range: 'faixa', severity: 'severidade' })
+// ex: mapAdvisories(db.vulns, { id: 'ghsa', pkg: 'name', range: 'vulnerable', severity: 'level' })
 export const mapAdvisories = (list, f) => list.map((a) => ({ ...a, id: a[f.id], pkg: a[f.pkg], range: a[f.range], severity: a[f.severity] }));

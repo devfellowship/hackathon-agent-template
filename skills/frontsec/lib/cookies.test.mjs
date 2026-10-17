@@ -22,9 +22,9 @@ test('default path', () => {
 });
 
 test('domain and lifetime', () => {
-  assert.deepEqual(C.cookieDomain(C.parseSetCookie('a=1; Domain=.IPE.example'), 'app.ipe.example'), { domain: 'ipe.example', hostOnly: false });
-  assert.ok(C.domainMatches('app.ipe.example', 'ipe.example'));
-  assert.ok(!C.domainMatches('app.ipe.example', 'pe.example'));
+  assert.deepEqual(C.cookieDomain(C.parseSetCookie('a=1; Domain=.SHOP.example'), 'app.shop.example'), { domain: 'shop.example', hostOnly: false });
+  assert.ok(C.domainMatches('app.shop.example', 'shop.example'));
+  assert.ok(!C.domainMatches('app.shop.example', 'op.example'));
   const now = '2026-10-21T18:01:00Z';
   assert.equal(C.lifetime(C.parseSetCookie('a=1; Expires=Sun, 20 Dec 2026 18:01:00 GMT; Max-Age=3600'), now).lifetime, 3600);
   assert.equal(C.lifetime(C.parseSetCookie('a=1; Expires=Wed, 28 Oct 2026 18:01:00 GMT'), now).lifetime, 604800);

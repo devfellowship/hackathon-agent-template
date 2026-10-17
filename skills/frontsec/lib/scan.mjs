@@ -183,7 +183,7 @@ export function findStorageSets(line, opts = {}) {
   return out.sort((a, b) => a.index - b.index);
 }
 
-// Case-insensitive "contains any of words". ex: containsAnyCI('SESSAO_ID', ['token','sessao']) === true
+// Case-insensitive "contains any of words". ex: containsAnyCI('SESSION_ID', ['token','session']) === true
 export const containsAnyCI = (s, words) => words.some((w) => s.toLowerCase().includes(w.toLowerCase()));
 
 // Bundle banners like "/*! name@1.2.3 | MIT */" -> [{ name, version, id: 'name@1.2.3', index }]

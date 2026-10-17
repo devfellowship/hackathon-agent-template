@@ -49,11 +49,11 @@ test('sinks with sources', () => {
 test('storage keys', () => {
   const r = S.findStorageSets("localStorage.setItem('auth_TOKEN', v); localStorage.setItem(k, v); sessionStorage.setItem('token', 1)");
   assert.deepEqual(r.map((x) => x.key), ['auth_TOKEN', null]);
-  assert.ok(S.containsAnyCI('SESSAO_ID', ['sessao']));
+  assert.ok(S.containsAnyCI('SESSION_ID', ['session']));
 });
 
 test('banners, source maps', () => {
-  assert.deepEqual(S.findBanners('/*! datas-br@1.4.2 | MIT */x/*! @s/ui@2.0.0-rc.1 */').map((b) => b.id), ['datas-br@1.4.2', '@s/ui@2.0.0-rc.1']);
+  assert.deepEqual(S.findBanners('/*! date-utils@2.3.1 | MIT */x/*! @s/ui@2.0.0-rc.1 */').map((b) => b.id), ['date-utils@2.3.1', '@s/ui@2.0.0-rc.1']);
   assert.deepEqual(S.findSourceMapRef('x;//# sourceMappingURL=app.js.map'), { target: 'app.js.map', isDataUri: false, index: 2 });
   assert.equal(S.findSourceMapRef('//# sourceMappingURL=data:application/json;base64,eyJ9').isDataUri, true);
   assert.equal(S.findSourceMapRef('/*# sourceMappingURL=a.css.map */').target, 'a.css.map');

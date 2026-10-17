@@ -129,7 +129,7 @@ const test = (c, v) => {
 // Is version inside range? Default: plain numeric comparison (prereleases compared like any version).
 // opts.npmPrerelease: npm rule — a prerelease only matches if some comparator in the same alternative
 // has a prerelease on the same major.minor.patch.
-// ex: satisfies('1.4.2', '>=1.0.0 <1.4.5') === true; satisfies('2.5.3', '<2.5.3 || >=3.0.0 <3.0.4') === false
+// ex: satisfies('2.3.1', '>=1.0.0 <2.3.4') === true; satisfies('4.1.3', '<4.1.3 || >=5.0.0 <5.0.4') === false
 // ex: satisfies('1.9.9', '^1.2.0') === true; satisfies('0.3.0', '^0.2.1') === false; satisfies('1.2.9', '1.2.x') === true
 export function satisfies(version, range, opts = {}) {
   const v = parseVersion(version);
@@ -145,7 +145,7 @@ export function satisfies(version, range, opts = {}) {
 
 // Smallest version in `available` that is > installed and NOT inside any of `badRanges`. null if none.
 // opts.allowEqual: also consider == installed. opts.skipPrerelease: ignore prerelease candidates.
-// ex: smallestSafe(['1.4.2','1.4.3','1.4.5'], '1.4.2', ['>=1.0.0 <1.4.5']) === '1.4.5'
+// ex: smallestSafe(['2.3.1','2.3.2','2.3.4'], '2.3.1', ['>=1.0.0 <2.3.4']) === '2.3.4'
 export function smallestSafe(available, installed, badRanges, opts = {}) {
   const cands = sortVersions(available.filter((v) => parseVersion(v)));
   for (const c of cands) {
