@@ -14,10 +14,14 @@ evals/run-local.sh p3 3          # P3 reunião → proposta (dfl-day4-reuniao-pr
 evals/run-local.sh biblioteca 1  # task de treino deste repo
 ```
 
-- Precisa de `OPENROUTER_API_KEY` no ambiente. Se não estiver definida, peça à pessoa. Nunca escreva a chave em arquivo.
+- Duas formas de pagar o modelo:
+  - **OpenCode Go** (assinatura): `MODEL=go evals/run-local.sh p1 3`. Roda `opencode-go/deepseek-v4.1-flash`, o mesmo
+    modelo da final, então é o teste mais fiel. Precisa de login uma vez: `opencode auth login` → OpenCode Go.
+  - **OpenRouter**: `OPENROUTER_API_KEY` no ambiente; o padrão é um modelo grátis (substituto do modelo da final).
+  - Se nenhum dos dois estiver configurado, peça à pessoa. Nunca escreva a chave em arquivo.
 - Usa os arquivos como estão no disco: não precisa de commit.
 - Cada run leva até 10 min. Rode em segundo plano se o seu CLI tiver limite de tempo por comando.
-- `MODEL=openrouter/<id>` troca o modelo. O padrão é grátis e tem limite (erro 429: espere e rode de novo).
+- `MODEL=openrouter/<id>` ou `MODEL=opencode-go/<id>` troca o modelo. Modelo grátis tem limite (erro 429: espere e rode de novo).
 
 ## Ler o resultado
 

@@ -45,6 +45,9 @@ evals/run-local.sh p1 3          # P1, P2 ou P3: clona a task de exemplo do prob
 evals/run-local.sh biblioteca 3  # task de treino deste repo
 ```
 
+**Tem OpenCode Go?** Rode com `MODEL=go evals/run-local.sh p1 3`: usa `opencode-go/deepseek-v4.1-flash`, o mesmo modelo
+da final (faça `opencode auth login` → OpenCode Go antes). É o teste local mais fiel.
+
 O placar sai por caso e etapa (`exemplo-3 · cookies`) e também em `/tmp/dfl-eval/ultimo.json`.
 
 **Programando com Claude Code, Codex, Gemini CLI ou Cursor?** O repo já ensina o seu CLI a rodar o agente

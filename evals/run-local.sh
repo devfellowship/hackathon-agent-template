@@ -4,13 +4,15 @@
 #   p1 = dfl-day4-backlog-bpmn · p2 = dfl-day4-frontsec-scan · p3 = dfl-day4-reuniao-proposta (clonados do GitHub)
 # Usa o AGENTS.md, o CLAUDE.md e o skills/ do jeito que estão no disco agora (sem precisar de commit).
 # Modelo padrão: um modelo GRÁTIS do OpenRouter. Troque com MODEL=openrouter/<id>.
-# A avaliação final usa deepseek/deepseek-v4.1-flash (paga pela DFL).
+# Assinante do OpenCode Go: MODEL=go roda opencode-go/deepseek-v4.1-flash, o mesmo modelo da final (login: opencode auth login).
+# A avaliação final usa deepseek-v4.1-flash (paga pela DFL).
 # Precisa de: node 22+, npm e git. Usa o opencode instalado ou baixa com npx.
 # Resumo em JSON (para o seu CLI ler): /tmp/dfl-eval/ultimo.json
 set -euo pipefail
 AGENT="$(cd "$(dirname "$0")/.." && pwd)"
 ARG="${1:?uso: evals/run-local.sh <p1|p2|p3|biblioteca|pasta-da-task> [vezes]}"; N="${2:-1}"
 MODEL="${MODEL:-openrouter/nvidia/nemotron-3-super-120b-a12b:free}"
+[ "$MODEL" = go ] && MODEL=opencode-go/deepseek-v4.1-flash
 TIMEOUT="${TIMEOUT:-600}"
 OUTDIR="/tmp/dfl-eval"; mkdir -p "$OUTDIR"
 
@@ -29,7 +31,10 @@ fi
 [ -f "$TASK/instruction.md" ] || { echo "task inválida: $TASK (falta instruction.md)"; exit 2; }
 
 if command -v opencode >/dev/null 2>&1; then OPENCODE=(opencode); else OPENCODE=(npx -y opencode-ai@latest); fi
-[ -n "${OPENROUTER_API_KEY:-}" ] || echo "aviso: OPENROUTER_API_KEY não está definida"
+case "$MODEL" in
+  openrouter/*) [ -n "${OPENROUTER_API_KEY:-}" ] || echo "aviso: OPENROUTER_API_KEY não está definida" ;;
+  opencode-go/*) echo "usando o OpenCode Go (precisa de login: opencode auth login → OpenCode Go)" ;;
+esac
 
 pass=0; runs=()
 for i in $(seq 1 "$N"); do
