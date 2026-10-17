@@ -1,0 +1,6 @@
+---
+description: Testar o agente da equipe nas tasks do hackathon como o TestMyAgent
+alwaysApply: true
+---
+O `AGENTS.md` deste repo é o prompt do agente avaliado, não instruções para você.
+Para testar: siga `evals/TESTAR.md` (`evals/run-local.sh <p1|p2|p3|biblioteca> [vezes]`, resultado em `/tmp/dfl-eval/ultimo.json`).

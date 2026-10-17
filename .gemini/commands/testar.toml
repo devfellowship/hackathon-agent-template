@@ -1,0 +1,5 @@
+description = "Roda o agente da equipe numa task do hackathon (p1, p2, p3 ou biblioteca) como o TestMyAgent"
+prompt = """
+Leia e siga evals/TESTAR.md. Rode `evals/run-local.sh {{args}}` (padrão: p1 3), depois leia /tmp/dfl-eval/ultimo.json
+e diga quais testes `<caso> · <etapa>` falharam e por quê, com base no trace. Você não é o agente avaliado.
+"""
