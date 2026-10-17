@@ -29,7 +29,7 @@ skills/<nome>/SKILL.md   procedimentos; scripts auxiliares podem ficar junto (ex
 
 ## 3. Teste local (o TestMyAgent roda só a final)
 
-Precisa de Node 22+, git, [opencode](https://opencode.ai) e uma chave OpenRouter.
+Precisa de Node 22+, git e uma chave OpenRouter. Usa o [opencode](https://opencode.ai) instalado ou baixa com `npx`.
 
 **Chave compartilhada do evento:** pegue a chave aqui → https://share.1password.com/s#o_lbfMaP8vWn37Nt5c-ue1qax0wh8Cy__37g8FG4jl0 (limite de US$ 5 para todos, válida por 7 dias). Use a chave só no seu terminal (`export OPENROUTER_API_KEY=...`). **Nunca** coloque a chave no repo, num commit ou num print: o GitHub detecta e a chave é revogada para todos. Também funciona com uma chave de conta grátis sua.
 Modelos grátis para testar: [artigo na wiki DFL](https://wiki.devfellowship.com/a/hackathon-dfl-day4-modelos-ia-gratuitos).
@@ -41,12 +41,19 @@ Modelos grátis para testar: [artigo na wiki DFL](https://wiki.devfellowship.com
 
 ```bash
 export OPENROUTER_API_KEY=...
-evals/run-local.sh examples/biblioteca 3     # task de exemplo deste repo: roda 3 vezes e conta os PASS
+evals/run-local.sh p1 3          # P1, P2 ou P3: clona a task de exemplo do problema e roda 3 vezes
+evals/run-local.sh biblioteca 3  # task de treino deste repo
 ```
 
-`examples/biblioteca` é uma task de treino (multas e reservas de biblioteca, 2 casos: simples e médio).
-No sábado, a produção publica as tasks de exemplo dos 3 problemas votados; rode o mesmo comando apontando para a pasta delas.
+O placar sai por caso e etapa (`exemplo-3 · cookies`) e também em `/tmp/dfl-eval/ultimo.json`.
 
+**Programando com Claude Code, Codex, Gemini CLI ou Cursor?** O repo já ensina o seu CLI a rodar o agente
+do mesmo jeito que o TestMyAgent: peça "testa o agente no P2". O passo a passo está em [`evals/TESTAR.md`](evals/TESTAR.md)
+(Claude Code: skill `testar-agente` · Codex: `.agents/skills` · Gemini: `/testar p2 3` · Cursor: regra em `.cursor/rules`).
+Esses arquivos não vão para o runner. Atenção, Codex: ele lê o `AGENTS.md` como instrução própria; lembre a ele que esse
+arquivo é o prompt do agente avaliado.
+
+`examples/biblioteca` é uma task de treino (multas e reservas de biblioteca, 2 casos: simples e médio).
 O script monta o workspace igual ao runner (environment + tests/public + seu AGENTS.md e skills/),
 roda o opencode, roda os testes públicos e avisa se o agente escreveu fora de `out/`.
 
