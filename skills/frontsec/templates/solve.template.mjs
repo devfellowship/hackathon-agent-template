@@ -2,6 +2,7 @@
 // Run from the workspace root:  node /tmp/solve.mjs            (all cases -> out/<case>.json)
 //                               node /tmp/solve.mjs exemplo-1  (one case, also prints the JSON)
 // RULE: README.md wins over every default of the library. Every number, list, name and sort order comes from the README.
+// Tag the code of each numbered README rule N with a comment // RN, then: node .opencode/skills/frontsec/coverage.mjs README.md /tmp/solve.mjs
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 const L = await import(process.cwd() + '/.opencode/skills/frontsec/lib/index.mjs');
@@ -119,6 +120,10 @@ function stagePlan(dir, scan, deps, sess) {
   // per (rule, file): add(`code:${f.rule}:${f.file}`, POINTS[f.rule], EFFORT[f.rule])
   // per dependency: add(`dep:${d.id}`, d.inBundle ? pts : L.floorDiv(pts, 2), effort, d.severity === 'critical' && d.inBundle)
   // per cookie with problems: add(`cookie:${c.name}@${c.domain}${c.path}`, L.sum(c.problems, (x) => PP[x]), 1)
+  // cross-stage attribution ("absorption"): a finding inside a file that carries the banner of a vulnerable package
+  //   goes to that package's item instead of its own: const ids = (deps.bmap.get(f.file) || []).map((b) => b.id).filter((id) => depItems.has(id)).sort(L.txt);
+  //   if (ids.length) { depItems.get(ids[0]).points += POINTS[f.rule]; continue; }   // build dep items BEFORE code items
+  // Tag every block with the README rule number: // R38, // R39 ... and run coverage.mjs.
 
   const exc = L.readJsonOr(join(dir, 'exceptions.json'), { exceptions: [] }); // TODO(spec)
   const accepted = [];

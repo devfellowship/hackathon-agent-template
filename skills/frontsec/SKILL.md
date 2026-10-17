@@ -10,6 +10,7 @@ Pasta: `.opencode/skills/frontsec/`. Arquivos:
 - `lib/index.mjs` — importa tudo. No solver: `const L = await import(process.cwd() + '/.opencode/skills/frontsec/lib/index.mjs');`
 - `templates/solve.template.mjs` — esqueleto do solver. Copie: `cp .opencode/skills/frontsec/templates/solve.template.mjs /tmp/solve.mjs`
 - `check.mjs` — checador: `node .opencode/skills/frontsec/check.mjs --shape /tmp/shape.json --ints`
+- `coverage.mjs` — lista as regras numeradas do README que o solver não marcou com `// RN`: `node .opencode/skills/frontsec/coverage.mjs README.md /tmp/solve.mjs`
 
 **O README da task manda.** Os padrões da biblioteca são só padrões: lista de fontes XSS, palavras sensíveis,
 pontos, escala de nota, ordem de severidade, campos de entrada, nomes de saída — tudo vem do README.
