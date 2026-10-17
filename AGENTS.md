@@ -1,12 +1,23 @@
-# Agente da equipe <NOME>
+# Agente de auditoria de segurança frontend
 
-Você é um agente que resolve UMA task por execução. A instrução da task chega no prompt.
+Você resolve UMA task por execução. A instrução chega no prompt. Você tem 600 s: trabalhe direto, sem conversa.
+Você NÃO calcula nada de cabeça: escreve UM script Node que calcula tudo, usando a biblioteca pronta.
+
+## Regras fixas
+
+- Escreva SÓ em `out/`. Rascunho e script vão em `/tmp`. Nunca edite `tests/`, `casos/`, `README.md`, `package*.json`, `.opencode/`. Nunca faça commit nem `npm install`.
+- O `README.md` da task manda. Ele vence qualquer padrão da biblioteca e qualquer coisa que você "sabe" de segurança.
+- Ordem de texto = código de caractere (`L.txt`). Versões = numérico (`L.cmpVersion`). Arredondar para baixo = `L.floorDiv`. Saída só com inteiros.
 
 ## Passo a passo
 
-1. Leia a instrução inteira. Depois leia `README.md` e a pasta `casos/` do workspace.
-2. Siga a skill `meu-problema` (em `.opencode/skills/meu-problema/SKILL.md`).
-3. Escreva SÓ dentro de `out/`. Rascunho vai em `/tmp`. Nunca edite `tests/`, `casos/` nem `package*.json`.
-4. Rode `npx vitest run tests/public` e `node .opencode/skills/checar-saida/check.mjs`.
-5. Se algo falhar, leia o erro, corrija e rode de novo. No máximo 3 ciclos.
-6. Pare quando os dois passarem. Não faça commit.
+1. Leia a instrução e o `README.md` INTEIROS (`cat README.md`). Liste os arquivos de um caso (`find casos/<um-caso> -type f | head -50`) e olhe 1 ou 2 arquivos de entrada.
+2. Leia `.opencode/skills/frontsec/SKILL.md` (a biblioteca e as armadilhas).
+3. Escreva o checklist em `/tmp/checklist.md`: para cada etapa da saída, cada regra numerada do README com: código, onde vale, condição exata, pontos, e a função da biblioteca que usa. Depois: nomes exatos dos campos de saída, ordenações, fórmulas, escala de nota, casos de borda. Para cada termo que o README DEFINE (dependente, caminho, alcançável, sensível, crítico, vencida…), copie a definição exata e anote se é direto (1 passo) ou transitivo (qualquer profundidade), inclusivo ou exclusivo. Copie o exemplo de saída do README para `/tmp/shape.json` (JSON válido).
+4. `cp .opencode/skills/frontsec/templates/solve.template.mjs /tmp/solve.mjs` e preencha TODOS os `TODO(spec)` seguindo o checklist. Use os nomes de campos de entrada e de saída do README, não os do esqueleto. Marque o código de cada regra numerada N do README com um comentário `// RN` (ex.: `// R39 absorção`).
+   Rode `node .opencode/skills/frontsec/coverage.mjs README.md /tmp/solve.mjs`: ele lista as regras numeradas sem `// RN`. Implemente cada uma (regras que juntam etapas, como "absorção"/"atribuição", são as mais esquecidas).
+5. Rode `node /tmp/solve.mjs` (do diretório do workspace). Erro ou `WARNING (likely BUG)` no stderr → corrija o script.
+6. Rode `npx vitest run tests/public 2>&1 | tail -80` e `node .opencode/skills/frontsec/check.mjs --shape /tmp/shape.json --ints`.
+7. Falhou? Leia o diff (Expected × Received), ache a regra do README que explica a diferença, corrija o SCRIPT (nunca o JSON à mão) e volte ao passo 5. No máximo 6 ciclos.
+8. Os testes públicos podem checar SÓ o formato. Então confira os VALORES você mesmo: o `check.mjs` imprime quantos itens cada caso tem — dezenas de achados num site pequeno = falso positivo. Abra 2 ou 3 achados (`sed -n 'Np' arquivo`) e confira contra a regra do README; procure também 1 caso que deveria dar achado e não deu. Releia o checklist: ordem, limite inclusivo/exclusivo, maiúsculas, `null` × `[]`.
+9. Pare quando os testes públicos, o `check.mjs` e o `coverage.mjs` passarem. Responda só "pronto".
